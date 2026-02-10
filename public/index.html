@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Email Marketer - MailChimp Alternative</title>
+  <link href="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest/dist/editorjs.css" rel="stylesheet">
+  <style>
+    /* Editor.js Container Styling */
+    .codex-editor {
+      background: white;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      min-height: 300px;
+    }
+    .codex-editor:hover {
+      border-color: #6366f1;
+    }
+    .codex-editor--focused {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+    .codex-editor__redactor {
+      padding: 20px;
+    }
+
+    /* Toolbar Styling */
+    .ce-toolbar {
+      opacity: 1 !important;
+      position: absolute;
+      left: -40px !important;
+    }
+    .ce-toolbar__plus {
+      color: #6366f1;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .ce-toolbar__plus:hover {
+      background: #e0e7ff;
+    }
+    .ce-toolbar__settings-btn {
+      color: #6366f1;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .ce-toolbar__settings-btn:hover {
+      background: #e0e7ff;
+    }
+
+    /* Block Styling */
+    .ce-block {
+      margin-bottom: 12px;
+      position: relative;
+    }
+    .ce-block__content {
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    .ce-block:hover .ce-block__content {
+      background: #f9fafb;
+    }
+    .ce-block--selected .ce-block__content {
+      background: #e0e7ff;
+    }
+
+    /* Inline Toolbar */
+    .ce-inline-toolbar {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      padding: 4px;
+    }
+    .ce-inline-tool {
+      width: 32px;
+      height: 32px;
+      border-radius: 4px;
+      color: #374151;
+      transition: all 0.2s;
+    }
+    .ce-inline-tool:hover {
+      background: #f3f4f6;
+    }
+    .ce-inline-tool--active {
+      background: #e0e7ff;
+      color: #6366f1;
+    }
+
+    /* Block Tunes (Settings) */
+    .ce-settings {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      padding: 4px;
+    }
+    .ce-settings__button {
+      padding: 8px 12px;
+      border-radius: 4px;
+      color: #374151;
+      transition: all 0.2s;
+    }
+    .ce-settings__button:hover {
+      background: #f3f4f6;
+    }
+
+    /* Conversion Toolbar (when typing "/") */
+    .ce-conversion-toolbar {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .ce-conversion-toolbar__label {
+      color: #9ca3af;
+      font-size: 11px;
+      text-transform: uppercase;
+      padding: 8px 12px 4px;
+    }
+    .ce-conversion-tool {
+      padding: 8px 12px;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    .ce-conversion-tool:hover {
+      background: #f3f4f6;
+    }
+    .ce-conversion-tool--focused {
+      background: #e0e7ff;
+    }
+    .ce-conversion-tool__icon {
+      color: #6366f1;
+    }
+
+    /* Placeholder */
+    .ce-paragraph[data-placeholder]:empty::before {
+      color: #9ca3af;
+      font-style: italic;
+    }
+
+    /* Header Styling */
+    .ce-header {
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    h1.ce-header { font-size: 2em; }
+    h2.ce-header { font-size: 1.75em; }
+    h3.ce-header { font-size: 1.5em; }
+    h4.ce-header { font-size: 1.25em; }
+    h5.ce-header { font-size: 1.1em; }
+    h6.ce-header { font-size: 1em; }
+
+    /* List Styling */
+    .cdx-list {
+      padding-left: 24px;
+    }
+    .cdx-list__item {
+      margin-bottom: 4px;
+      line-height: 1.6;
+    }
+
+    /* Quote Styling */
+    .cdx-quote {
+      border-left: 4px solid #6366f1;
+      padding-left: 16px;
+      margin: 16px 0;
+    }
+    .cdx-quote__text {
+      font-style: italic;
+      color: #4b5563;
+    }
+    .cdx-quote__caption {
+      font-size: 0.9em;
+      color: #6b7280;
+      margin-top: 8px;
+    }
+
+    /* Code Styling */
+    .cdx-code {
+      background: #1f2937;
+      color: #f3f4f6;
+      padding: 16px;
+      border-radius: 8px;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 0.9em;
+      overflow-x: auto;
+    }
+
+    /* Table Styling */
+    .tc-table {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .tc-row {
+      display: flex;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .tc-row:last-child {
+      border-bottom: none;
+    }
+    .tc-cell {
+      flex: 1;
+      padding: 12px;
+      border-right: 1px solid #e5e7eb;
+      min-height: 44px;
+    }
+    .tc-cell:last-child {
+      border-right: none;
+    }
+
+    /* Dark Mode Support */
+    .dark-mode .codex-editor {
+      background: #1a1a1a;
+      border-color: #333;
+    }
+    .dark-mode .codex-editor:hover,
+    .dark-mode .codex-editor--focused {
+      border-color: #818cf8;
+    }
+    .dark-mode .ce-block__content,
+    .dark-mode .ce-toolbar__content {
+      color: #fff;
+    }
+    .dark-mode .ce-block:hover .ce-block__content {
+      background: #262626;
+    }
+    .dark-mode .ce-block--selected .ce-block__content {
+      background: #312e81;
+    }
+    .dark-mode .ce-inline-toolbar,
+    .dark-mode .ce-settings,
+    .dark-mode .ce-conversion-toolbar {
+      background: #262626;
+      border-color: #404040;
+    }
+    .dark-mode .ce-inline-tool,
+    .dark-mode .ce-settings__button {
+      color: #d1d5db;
+    }
+    .dark-mode .ce-inline-tool:hover,
+    .dark-mode .ce-settings__button:hover {
+      background: #404040;
+    }
+    .dark-mode .ce-conversion-tool:hover {
+      background: #404040;
+    }
+    .dark-mode .ce-conversion-tool--focused {
+      background: #312e81;
+    }
+    .dark-mode .cdx-quote__text {
+      color: #d1d5db;
+    }
+    .dark-mode .cdx-quote__caption {
+      color: #9ca3af;
+    }
+    .dark-mode .cdx-code {
+      background: #111827;
+    }
+    .dark-mode .tc-table {
+      border-color: #404040;
+    }
+    .dark-mode .tc-row {
+      border-color: #404040;
+    }
+    .dark-mode .tc-cell {
+      border-color: #404040;
+    }
+    .dark-mode .ce-paragraph[data-placeholder]:empty::before {
+      color: #6b7280;
+    }
+  </style>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Mobile Header (CSS-only mobile detection) -->
+  <header class="mobile-header mobile-visible">
+    <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
+    <span class="mobile-title">Email Marketer</span>
+  </header>
+
+  <!-- Mobile Menu Overlay -->
+  <div class="mobile-menu-overlay" id="mobile-menu-overlay" onclick="toggleMobileMenu()"></div>
+
+  <!-- Mobile Sidebar -->
+  <aside class="mobile-sidebar mobile-visible" id="mobile-sidebar">
+    <div class="mobile-sidebar-header">
+      <span class="logo-icon">📧</span>
+      <span>Email Marketer</span>
+      <button class="mobile-sidebar-close" onclick="toggleMobileMenu()">✕</button>
+    </div>
+    <nav class="mobile-nav-menu">
+      <a href="#" class="mobile-nav-item active" data-view="dashboard">
+        <span class="nav-icon">📊</span>
+        <span>Dashboard</span>
+      </a>
+      <a href="#" class="mobile-nav-item" data-view="contacts">
+        <span class="nav-icon">👥</span>
+        <span>Contacts</span>
+      </a>
+      <a href="#" class="mobile-nav-item" data-view="lists">
+        <span class="nav-icon">📋</span>
+        <span>Lists</span>
+      </a>
+      <a href="#" class="mobile-nav-item" data-view="templates">
+        <span class="nav-icon">📝</span>
+        <span>Templates</span>
+      </a>
+      <a href="#" class="mobile-nav-item" data-view="campaigns">
+        <span class="nav-icon">🚀</span>
+        <span>Campaigns</span>
+      </a>
+      <a href="#" class="mobile-nav-item" data-view="settings">
+        <span class="nav-icon">⚙️</span>
+        <span>Settings</span>
+      </a>
+    </nav>
+  </aside>
+
+  <div class="app">
+    <!-- Sidebar (desktop) -->
+    <aside class="sidebar desktop-sidebar">
+      <div class="logo">
+        <span class="logo-icon">📧</span>
+        <h1>Email Marketer</h1>
+      </div>
+      <nav class="nav-menu">
+        <a href="#" class="nav-item active" data-view="dashboard">
+          <span class="nav-icon">📊</span>
+          Dashboard
+        </a>
+        <a href="#" class="nav-item" data-view="contacts">
+          <span class="nav-icon">👥</span>
+          Contacts
+        </a>
+        <a href="#" class="nav-item" data-view="lists">
+          <span class="nav-icon">📋</span>
+          Lists
+        </a>
+        <a href="#" class="nav-item" data-view="templates">
+          <span class="nav-icon">📝</span>
+          Templates
+        </a>
+        <a href="#" class="nav-item" data-view="campaigns">
+          <span class="nav-icon">🚀</span>
+          Campaigns
+        </a>
+        <a href="#" class="nav-item" data-view="settings">
+          <span class="nav-icon">⚙️</span>
+          Settings
+        </a>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Dashboard View -->
+      <section id="dashboard-view" class="view active">
+        <h2 class="section-title">Dashboard</h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-info">
+              <span class="stat-value" id="stat-contacts">0</span>
+              <span class="stat-label">Total Contacts</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">📋</div>
+            <div class="stat-info">
+              <span class="stat-value" id="stat-lists">0</span>
+              <span class="stat-label">Lists</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🚀</div>
+            <div class="stat-info">
+              <span class="stat-value" id="stat-campaigns">0</span>
+              <span class="stat-label">Campaigns</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">📧</div>
+            <div class="stat-info">
+              <span class="stat-value" id="stat-sent">0</span>
+              <span class="stat-label">Emails Sent</span>
+            </div>
+          </div>
+        </div>
+        <div class="recent-section">
+          <h3>Recent Campaigns</h3>
+          <div id="recent-campaigns" class="table-container">
+            <div class="empty-state">No campaigns yet</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Contacts View -->
+      <section id="contacts-view" class="view">
+        <div class="section-header">
+          <h2 class="section-title">Contacts</h2>
+          <button class="btn btn-primary mobile-btn-full" onclick="showContactModal()">+ Add Contact</button>
+        </div>
+        <div class="filters">
+          <input type="text" id="contact-search" placeholder="🔍 Search contacts..." class="search-input" oninput="loadContacts()">
+          <input type="text" id="contact-tag-filter" placeholder="🏷️ Filter by tag..." class="search-input" oninput="loadContacts()">
+        </div>
+        <div class="bulk-actions" id="bulk-actions" style="display: none;">
+          <span id="selected-count">0 selected</span>
+          <button class="btn btn-small" onclick="exportContacts()">📤 Export</button>
+          <button class="btn btn-small btn-danger" onclick="bulkDeleteContacts()">🗑️ Delete</button>
+          <button class="btn btn-small" onclick="clearSelection()">Clear</button>
+        </div>
+        <div id="contacts-list" class="table-container table-scrollable">
+          <div class="empty-state">No contacts yet</div>
+        </div>
+      </section>
+
+      <!-- Lists View -->
+      <section id="lists-view" class="view">
+        <div class="section-header">
+          <h2 class="section-title">Lists</h2>
+          <button class="btn btn-primary mobile-btn-full" onclick="showListModal()">+ Create List</button>
+        </div>
+        <div id="lists-grid" class="lists-grid">
+          <div class="empty-state">No lists yet</div>
+        </div>
+      </section>
+
+      <!-- Templates View -->
+      <section id="templates-view" class="view">
+        <div class="section-header">
+          <h2 class="section-title">Email Templates</h2>
+          <button class="btn btn-primary mobile-btn-full" onclick="showTemplateModal()">+ Create Template</button>
+        </div>
+        <div id="templates-grid" class="templates-grid">
+          <div class="empty-state">No templates yet</div>
+        </div>
+      </section>
+
+      <!-- Campaigns View -->
+      <section id="campaigns-view" class="view">
+        <div class="section-header">
+          <h2 class="section-title">Campaigns</h2>
+          <button class="btn btn-primary mobile-btn-full" onclick="showCampaignModal()">+ Create Campaign</button>
+        </div>
+        <div id="campaigns-list" class="table-container table-scrollable">
+          <div class="empty-state">No campaigns yet</div>
+        </div>
+      </section>
+
+      <!-- Settings View -->
+      <section id="settings-view" class="view">
+        <h2 class="section-title">Settings</h2>
+        <div class="settings-section">
+          <h3>Mailgun Configuration</h3>
+          <div class="form-group">
+            <label for="mailgun-api-key">API Key</label>
+            <input type="password" id="mailgun-api-key" placeholder="Enter your Mailgun API key">
+          </div>
+          <div class="form-group">
+            <label for="mailgun-domain">Domain</label>
+            <input type="text" id="mailgun-domain" placeholder="e.g., mg.yourdomain.com">
+          </div>
+          <button class="btn btn-primary mobile-btn-full" onclick="saveSettings()">Save Settings</button>
+        </div>
+        <div class="settings-section" style="margin-top: 20px;">
+          <h3>Appearance</h3>
+          <div class="form-group">
+            <label>Theme</label>
+            <div style="display: flex; gap: 12px; margin-top: 8px;">
+              <button class="btn" id="theme-toggle" onclick="toggleDarkMode()" style="display: flex; align-items: center; gap: 8px;">
+                <span id="theme-icon">🌙</span>
+                <span id="theme-text">Dark Mode</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="settings-section" style="margin-top: 20px;">
+          <h3>Import Contacts</h3>
+          <p style="color: var(--text-secondary); margin-bottom: 12px;">Import contacts from a CSV file</p>
+          <input type="file" id="csv-import" accept=".csv" onchange="importContacts(event)" style="display: none;">
+          <button class="btn" onclick="document.getElementById('csv-import').click()">📥 Import CSV</button>
+        </div>
+        <div class="settings-section" style="margin-top: 20px;">
+          <h3>Export Contacts</h3>
+          <p style="color: var(--text-secondary); margin-bottom: 12px;">Export all contacts to CSV</p>
+          <button class="btn" onclick="exportAllContacts()">📤 Export All Contacts</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Mobile Bottom Navigation -->
+  <nav class="mobile-bottom-nav" style="display: none;">
+    <a href="#" class="mobile-bottom-nav-item active" data-view="dashboard">
+      <span class="nav-icon">📊</span>
+      <span>Dashboard</span>
+    </a>
+    <a href="#" class="mobile-bottom-nav-item" data-view="contacts">
+      <span class="nav-icon">👥</span>
+      <span>Contacts</span>
+    </a>
+    <a href="#" class="mobile-bottom-nav-item" data-view="lists">
+      <span class="nav-icon">📋</span>
+      <span>Lists</span>
+    </a>
+    <a href="#" class="mobile-bottom-nav-item" data-view="campaigns">
+      <span class="nav-icon">🚀</span>
+      <span>Send</span>
+    </a>
+    <a href="#" class="mobile-bottom-nav-item" data-view="settings">
+      <span class="nav-icon">⚙️</span>
+      <span>Settings</span>
+    </a>
+  </nav>
+
+  <!-- Contact Modal -->
+  <div class="modal-overlay" id="contact-modal">
+    <div class="modal">
+      <h3 id="contact-modal-title">Add Contact</h3>
+      <input type="hidden" id="contact-id">
+      <div class="form-group">
+        <label for="contact-email">Email *</label>
+        <input type="email" id="contact-email" placeholder="john@example.com">
+      </div>
+      <div class="form-group">
+        <label for="contact-name">Name</label>
+        <input type="text" id="contact-name" placeholder="John Doe">
+      </div>
+      <div class="form-group">
+        <label for="contact-tags">Tags (comma separated)</label>
+        <input type="text" id="contact-tags" placeholder="vip, newsletter, customer">
+      </div>
+      <div class="modal-actions">
+        <button class="btn" onclick="hideContactModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveContact()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- List Modal -->
+  <div class="modal-overlay" id="list-modal">
+    <div class="modal">
+      <h3 id="list-modal-title">Create List</h3>
+      <input type="hidden" id="list-id">
+      <div class="form-group">
+        <label for="list-name">List Name *</label>
+        <input type="text" id="list-name" placeholder="My Newsletter Subscribers">
+      </div>
+      <div class="form-group">
+        <label for="list-description">Description</label>
+        <textarea id="list-description" placeholder="Description of this list..."></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" onclick="hideListModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveList()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- List Detail Modal -->
+  <div class="modal-overlay" id="list-detail-modal">
+    <div class="modal modal-large">
+      <h3 id="list-detail-title">List Details</h3>
+      <input type="hidden" id="list-detail-id">
+      <div class="list-detail-header">
+        <p id="list-detail-description"></p>
+        <span class="badge" id="list-detail-count">0 contacts</span>
+      </div>
+      <div class="list-detail-actions">
+        <select id="add-contact-select" class="search-input" style="flex: 1;">
+          <option value="">-- Select contact to add --</option>
+        </select>
+        <button class="btn btn-primary" onclick="addSelectedContactToList()">Add</button>
+      </div>
+      <div id="list-detail-contacts" class="table-container table-scrollable">
+        <div class="empty-state">No contacts in this list</div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" onclick="hideListDetailModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Template Modal -->
+  <div class="modal-overlay" id="template-modal">
+    <div class="modal modal-large">
+      <h3 id="template-modal-title">Create Template</h3>
+      <input type="hidden" id="template-id">
+      <div class="form-group">
+        <label for="template-name">Template Name *</label>
+        <input type="text" id="template-name" placeholder="Welcome Email">
+      </div>
+      <div class="form-group">
+        <label for="template-subject">Email Subject *</label>
+        <input type="text" id="template-subject" placeholder="Welcome to our newsletter!">
+      </div>
+      <div class="form-group">
+        <label for="template-editor-js">Email Content</label>
+        <div id="template-editor-js" style="border: 1px solid #ddd; border-radius: 4px; min-height: 300px;"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" onclick="hideTemplateModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveTemplate()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Campaign Modal -->
+  <div class="modal-overlay" id="campaign-modal">
+    <div class="modal modal-large">
+      <h3 id="campaign-modal-title">Create Campaign</h3>
+      <input type="hidden" id="campaign-id">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="campaign-name">Campaign Name *</label>
+          <input type="text" id="campaign-name" placeholder="Summer Sale Announcement">
+        </div>
+        <div class="form-group">
+          <label for="campaign-list">Send to List *</label>
+          <select id="campaign-list">
+            <option value="">-- Select a list --</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="campaign-template">Select Template *</label>
+          <select id="campaign-template" onchange="loadTemplateIntoCampaign()">
+            <option value="">-- Choose a template --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="campaign-subject">Email Subject *</label>
+          <input type="text" id="campaign-subject" placeholder="Don't miss our summer sale!">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Email Content <small>(customize the template below)</small></label>
+        <div id="campaign-editor-js" style="border: 1px solid #ddd; border-radius: 4px; min-height: 300px;"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" onclick="hideCampaignModal()">Cancel</button>
+        <button class="btn btn-secondary" onclick="saveCampaignAsDraft()">Save Draft</button>
+        <button class="btn btn-primary" onclick="sendCampaign()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Send Confirmation Modal -->
+  <div class="modal-overlay" id="send-modal">
+    <div class="modal">
+      <h3>Send Campaign</h3>
+      <p id="send-count">Are you sure you want to send this campaign?</p>
+      <div class="modal-actions">
+        <button class="btn" onclick="hideSendModal()">Cancel</button>
+        <button class="btn btn-primary" id="confirm-send-btn" onclick="confirmSendCampaign()">Send Now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast" style="display: none;"></div>
+
+  <!-- Loading Spinner -->
+  <div id="loading-overlay" class="loading-overlay" style="display: none;">
+    <div class="spinner"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest/dist/editorjs.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest/dist/header.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/paragraph@latest/dist/paragraph.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest/dist/list.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@latest/dist/quote.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/raw@latest/dist/raw.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/table@latest/dist/table.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/code@latest/dist/code.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/delimiter@latest/dist/delimiter.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/marker@latest/dist/marker.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/inline-code@latest/dist/inline-code.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/link@latest/dist/link.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/image@latest/dist/image.umd.min.js"></script>
+  <script src="js/editor.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    // Mobile menu toggle
+    function toggleMobileMenu() {
+      const sidebar = document.getElementById('mobile-sidebar');
+      const overlay = document.getElementById('mobile-menu-overlay');
+      sidebar.classList.toggle('open');
+      overlay.classList.toggle('open');
+    }
+
+    // Update mobile nav active state
+    function updateMobileNav(view) {
+      document.querySelectorAll('.mobile-nav-item, .mobile-bottom-nav-item').forEach(item => {
+        item.classList.toggle('active', item.dataset.view === view);
+      });
+    }
+
+    // Override switchView to update mobile nav
+    const originalSwitchView = switchView;
+    switchView = function(view) {
+      originalSwitchView(view);
+      updateMobileNav(view);
+    };
+
+    // Toast notification
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = 'toast ' + type;
+      toast.style.display = 'block';
+      setTimeout(() => {
+        toast.style.display = 'none';
+      }, 3000);
+    }
+
+    // Import contacts from CSV
+    async function importContacts(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        const csv = e.target.result;
+        const lines = csv.split('\n');
+        let imported = 0;
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line || i === 0) continue; // Skip header and empty lines
+
+          const [email, name, tags] = line.split(',').map(s => s.trim());
+          if (email && email.includes('@')) {
+            try {
+              await fetch('/api/contacts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, name, tags: tags ? [tags] : [] })
+              });
+              imported++;
+            } catch (err) {
+              console.error('Error importing contact:', email);
+            }
+          }
+        }
+
+        showToast(`Imported ${imported} contacts!`, 'success');
+        loadContacts();
+      };
+      reader.readAsText(file);
+      event.target.value = ''; // Reset input
+    }
+
+    // Export contacts to CSV
+    async function exportContacts() {
+      const contacts = getSelectedContacts();
+      if (contacts.length === 0) {
+        showToast('No contacts selected', 'error');
+        return;
+      }
+
+      let csv = 'email,name,tags\n';
+      contacts.forEach(c => {
+        csv += `${c.email},"${c.name || ''}","${c.tags ? c.tags.join(',') : ''}"\n`;
+      });
+
+      downloadCSV(csv, 'selected-contacts.csv');
+      showToast(`Exported ${contacts.length} contacts`, 'success');
+    }
+
+    // Export all contacts
+    async function exportAllContacts() {
+      try {
+        const response = await fetch('/api/contacts');
+        const contacts = await response.json();
+
+        let csv = 'email,name,tags\n';
+        contacts.forEach(c => {
+          csv += `${c.email},"${c.name || ''}","${c.tags ? c.tags.join(',') : ''}"\n`;
+        });
+
+        downloadCSV(csv, 'all-contacts.csv');
+        showToast(`Exported ${contacts.length} contacts`, 'success');
+      } catch (err) {
+        showToast('Error exporting contacts', 'error');
+      }
+    }
+
+    // Download CSV helper
+    function downloadCSV(content, filename) {
+      const blob = new Blob([content], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Bulk delete
+    async function bulkDeleteContacts() {
+      const contacts = getSelectedContacts();
+      if (contacts.length === 0) {
+        showToast('No contacts selected', 'error');
+        return;
+      }
+
+      if (!confirm(`Delete ${contacts.length} selected contacts?`)) return;
+
+      for (const c of contacts) {
+        await fetch(`/api/contacts/${c.id}`, { method: 'DELETE' });
+      }
+
+      showToast(`Deleted ${contacts.length} contacts`, 'success');
+      clearSelection();
+      loadContacts();
+    }
+
+    // Selection tracking - use existing selectedContacts from app.js
+    function getSelectedContacts() {
+      return Array.from(selectedContacts || new Set());
+    }
+
+    function clearSelection() {
+      selectedContacts.clear();
+      document.querySelectorAll('.contact-checkbox').forEach(cb => cb.checked = false);
+      document.getElementById('bulk-actions').style.display = 'none';
+    }
+
+    // Check for mobile and show/hide elements
+    function checkMobile() {
+      const isMobile = window.innerWidth < 768;
+      document.querySelectorAll('.mobile-header, .mobile-sidebar, .mobile-bottom-nav').forEach(el => {
+        el.classList.toggle('mobile-visible', isMobile);
+      });
+      document.querySelectorAll('.desktop-sidebar').forEach(el => {
+        el.style.display = isMobile ? 'none' : '';
+      });
+    }
+
+    // Loading spinner
+    window.showLoading = function() {
+      document.getElementById('loading-overlay').style.display = 'flex';
+    };
+
+    window.hideLoading = function() {
+      document.getElementById('loading-overlay').style.display = 'none';
+    };
+
+    // Dark mode
+    window.toggleDarkMode = function() {
+      document.body.classList.toggle('dark-mode');
+      const isDarkMode = document.body.classList.contains('dark-mode');
+      localStorage.setItem('darkMode', isDarkMode);
+      updateThemeUI(isDarkMode);
+    };
+
+    function updateThemeUI(isDarkMode) {
+      const icon = document.getElementById('theme-icon');
+      const text = document.getElementById('theme-text');
+      if (icon) icon.textContent = isDarkMode ? '☀️' : '🌙';
+      if (text) text.textContent = isDarkMode ? 'Light Mode' : 'Dark Mode';
+    }
+
+    // Load dark mode preference
+    const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+    if (savedDarkMode) {
+      document.body.classList.add('dark-mode');
+    }
+    // Update UI after page loads
+    setTimeout(() => updateThemeUI(savedDarkMode), 100);
+
+    // Force check mobile on load and resize
+    window.addEventListener('resize', checkMobile);
+    window.addEventListener('DOMContentLoaded', checkMobile);
+    // Also check after a short delay to ensure layout is ready
+    setTimeout(checkMobile, 100);
+    setTimeout(checkMobile, 500);
+  </script>
+</body>
+</html>

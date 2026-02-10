@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database and uploads (data persists locally, not in git)
+data/*.db
+data/*.db-journal
+public/uploads/*
+!public/uploads/.gitkeep
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Testing
+coverage/
+test-results/
+.nyc_output/
+
+# Logs
+logs/
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker volumes (if mounted)
+data/
+
+# Memory files (session-specific)
+memory/

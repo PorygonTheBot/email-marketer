@@ -1,0 +1,42 @@
+{
+  "name": "email-marketer",
+  "version": "1.0.0",
+  "description": "MailChimp-like email marketing web app with Mailgun integration",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "jest --testTimeout=30000",
+    "test:api": "jest tests/integration/api.test.js --testTimeout=30000",
+    "test:e2e": "playwright test tests/e2e/",
+    "test:all": "npm run test:api && npm run test:e2e",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:shell": "docker-compose exec email-marketer sh"
+  },
+  "dependencies": {
+    "@editorjs/code": "^2.9.4",
+    "@editorjs/delimiter": "^1.4.2",
+    "@editorjs/editorjs": "^2.31.1",
+    "@editorjs/header": "^2.8.8",
+    "@editorjs/image": "^2.10.3",
+    "@editorjs/link": "^2.6.2",
+    "@editorjs/list": "^2.0.9",
+    "@editorjs/paragraph": "^2.11.7",
+    "@editorjs/quote": "^2.7.6",
+    "@editorjs/raw": "^2.5.1",
+    "@editorjs/table": "^2.4.5",
+    "express": "^4.18.2",
+    "form-data": "^4.0.0",
+    "mailgun.js": "^9.3.0",
+    "sql.js": "^1.13.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "jest": "^30.2.0",
+    "playwright": "^1.58.2",
+    "supertest": "^6.3.3"
+  }
+}
