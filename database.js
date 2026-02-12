@@ -110,6 +110,34 @@ async function initDatabase() {
     )
   `);
 
+  // Users table for authentication
+  db.run(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      name TEXT,
+      role TEXT DEFAULT 'user',
+      active BOOLEAN DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Migration: Add user_id to existing tables for multi-tenancy
+  try {
+    db.run('ALTER TABLE contacts ADD COLUMN user_id INTEGER');
+  } catch (err) {}
+  try {
+    db.run('ALTER TABLE lists ADD COLUMN user_id INTEGER');
+  } catch (err) {}
+  try {
+    db.run('ALTER TABLE templates ADD COLUMN user_id INTEGER');
+  } catch (err) {}
+  try {
+    db.run('ALTER TABLE campaigns ADD COLUMN user_id INTEGER');
+  } catch (err) {}
+
   // Migration: Add editor_blocks column to templates if it doesn't exist
   try {
     db.run('ALTER TABLE templates ADD COLUMN editor_blocks TEXT');
@@ -123,6 +151,20 @@ async function initDatabase() {
   } catch (err) {
     // Column already exists, ignore error
   }
+
+  // Shares table for collaboration
+  db.run(`
+    CREATE TABLE IF NOT EXISTS shares (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      resource_type TEXT NOT NULL,
+      resource_id INTEGER NOT NULL,
+      owner_id INTEGER NOT NULL,
+      shared_with_id INTEGER NOT NULL,
+      permission TEXT DEFAULT 'view',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(resource_type, resource_id, shared_with_id)
+    )
+  `);
 
   saveDatabase();
 }
@@ -153,9 +195,14 @@ function runQuery(sql, params = []) {
 
 // Contact functions
 function getContacts(options = {}) {
-  const { search, tag, limit = 100, offset = 0 } = options;
+  const { search, tag, limit = 100, offset = 0, userId } = options;
   let sql = 'SELECT * FROM contacts WHERE 1=1';
   const params = [];
+
+  if (userId) {
+    sql += ' AND (user_id = ? OR user_id IS NULL)';
+    params.push(userId);
+  }
 
   if (search) {
     sql += ' AND (email LIKE ? OR name LIKE ?)';
@@ -185,9 +232,13 @@ function getContactByEmail(email) {
   return results[0];
 }
 
-function createContact(email, name = '', tags = []) {
+function createContact(email, name = '', tags = [], userId = null) {
   const tagsJson = JSON.stringify(tags);
-  db.run('INSERT INTO contacts (email, name, tags) VALUES (?, ?, ?)', [email, name, tagsJson]);
+  if (userId) {
+    db.run('INSERT INTO contacts (email, name, tags, user_id) VALUES (?, ?, ?, ?)', [email, name, tagsJson, userId]);
+  } else {
+    db.run('INSERT INTO contacts (email, name, tags) VALUES (?, ?, ?)', [email, name, tagsJson]);
+  }
   return getContactByEmail(email);
 }
 
@@ -220,7 +271,10 @@ function deleteContact(id) {
 }
 
 // List functions
-function getLists() {
+function getLists(userId = null) {
+  if (userId) {
+    return runQuery('SELECT * FROM lists WHERE user_id = ? OR user_id IS NULL ORDER BY created_at DESC', [userId]);
+  }
   return runQuery('SELECT * FROM lists ORDER BY created_at DESC');
 }
 
@@ -290,7 +344,10 @@ function getListStats(listId) {
 }
 
 // Template functions
-function getTemplates() {
+function getTemplates(userId = null) {
+  if (userId) {
+    return runQuery('SELECT * FROM templates WHERE user_id = ? OR user_id IS NULL ORDER BY created_at DESC', [userId]);
+  }
   return runQuery('SELECT * FROM templates ORDER BY created_at DESC');
 }
 
@@ -488,6 +545,95 @@ function setSetting(key, value) {
   saveDatabase();
 }
 
+// User functions
+function createUser(email, passwordHash, name = '') {
+  db.run('INSERT INTO users (email, password_hash, name) VALUES (?, ?, ?)', [email, passwordHash, name]);
+  return getUserByEmail(email);
+}
+
+function getUserByEmail(email) {
+  const results = runQuery('SELECT * FROM users WHERE email = ?', [email]);
+  if (results.length === 0) return null;
+  return results[0];
+}
+
+function getUserById(id) {
+  const results = runQuery('SELECT * FROM users WHERE id = ?', [id]);
+  if (results.length === 0) return null;
+  return results[0];
+}
+
+function updateUser(id, updates) {
+  const allowedFields = ['name', 'password_hash', 'role', 'active'];
+  const fields = [];
+  const params = [];
+  
+  for (const [key, value] of Object.entries(updates)) {
+    if (allowedFields.includes(key)) {
+      fields.push(`${key} = ?`);
+      params.push(value);
+    }
+  }
+  
+  if (fields.length === 0) return getUserById(id);
+  
+  params.push(id);
+  db.run(`UPDATE users SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, params);
+  return getUserById(id);
+}
+
+function deleteUser(id) {
+  db.run('DELETE FROM users WHERE id = ?', [id]);
+}
+
+// Share functions
+function createShare(resourceType, resourceId, ownerId, sharedWithId, permission = 'view') {
+  db.run('INSERT OR REPLACE INTO shares (resource_type, resource_id, owner_id, shared_with_id, permission) VALUES (?, ?, ?, ?, ?)', 
+    [resourceType, resourceId, ownerId, sharedWithId, permission]);
+  return getSharesForResource(resourceType, resourceId, ownerId);
+}
+
+function getSharesForResource(resourceType, resourceId, ownerId) {
+  return runQuery(`
+    SELECT s.*, u.email, u.name 
+    FROM shares s
+    JOIN users u ON s.shared_with_id = u.id
+    WHERE s.resource_type = ? AND s.resource_id = ? AND s.owner_id = ?
+  `, [resourceType, resourceId, ownerId]);
+}
+
+function getSharedResourcesForUser(userId, resourceType) {
+  return runQuery(`
+    SELECT s.*, u.email as owner_email, u.name as owner_name
+    FROM shares s
+    JOIN users u ON s.owner_id = u.id
+    WHERE s.shared_with_id = ? AND s.resource_type = ?
+  `, [userId, resourceType]);
+}
+
+function deleteShare(shareId) {
+  db.run('DELETE FROM shares WHERE id = ?', [shareId]);
+}
+
+function canAccessResource(resourceType, resourceId, userId) {
+  // Check if user is owner
+  const ownerCheck = runQuery(`
+    SELECT 1 FROM ${resourceType} WHERE id = ? AND (user_id = ? OR user_id IS NULL)
+  `, [resourceId, userId]);
+  
+  if (ownerCheck.length > 0) return { canAccess: true, isOwner: true };
+  
+  // Check if shared with user
+  const shareCheck = runQuery(`
+    SELECT permission FROM shares 
+    WHERE resource_type = ? AND resource_id = ? AND shared_with_id = ?
+  `, [resourceType, resourceId, userId]);
+  
+  if (shareCheck.length > 0) return { canAccess: true, isOwner: false, permission: shareCheck[0].permission };
+  
+  return { canAccess: false };
+}
+
 // Save database on module load and periodically
 initDatabase().then(() => {
   console.log('Database initialized');
@@ -497,6 +643,16 @@ initDatabase().then(() => {
 // Export functions
 module.exports = {
   initDatabase,
+  createUser,
+  getUserByEmail,
+  getUserById,
+  updateUser,
+  deleteUser,
+  createShare,
+  getSharesForResource,
+  getSharedResourcesForUser,
+  deleteShare,
+  canAccessResource,
   getContacts,
   getContact,
   getContactByEmail,

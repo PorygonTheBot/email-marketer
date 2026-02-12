@@ -8,14 +8,169 @@ let editingListId = null;
 let editingTemplateId = null;
 let editingCampaignId = null;
 let selectedContacts = new Set();
+let authToken = localStorage.getItem('authToken') || null;
+let currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', () => {
+  checkAuth();
+});
+
+// Authentication Functions
+function checkAuth() {
+  if (authToken) {
+    // Verify token is still valid
+    fetch(`${API_BASE}/api/auth/me`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    })
+    .then(res => {
+      if (res.ok) {
+        return res.json();
+      } else {
+        throw new Error('Invalid token');
+      }
+    })
+    .then(user => {
+      currentUser = user;
+      showMainApp();
+    })
+    .catch(() => {
+      logout();
+    });
+  }
+}
+
+function showLoginForm() {
+  document.getElementById('auth-login-form').style.display = 'block';
+  document.getElementById('auth-register-form').style.display = 'none';
+}
+
+function showRegisterForm() {
+  document.getElementById('auth-login-form').style.display = 'none';
+  document.getElementById('auth-register-form').style.display = 'block';
+}
+
+async function handleLogin() {
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  
+  if (!email || !password) {
+    showToast('Please enter email and password', 'error');
+    return;
+  }
+  
+  try {
+    const response = await authFetch(`${API_BASE}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      authToken = data.token;
+      currentUser = data.user;
+      localStorage.setItem('authToken', authToken);
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
+      showMainApp();
+      showToast('Welcome back!', 'success');
+    } else {
+      showToast(data.error || 'Login failed', 'error');
+    }
+  } catch (err) {
+    showToast('Login error', 'error');
+  }
+}
+
+async function handleRegister() {
+  const name = document.getElementById('auth-reg-name').value.trim();
+  const email = document.getElementById('auth-reg-email').value.trim();
+  const password = document.getElementById('auth-reg-password').value;
+  
+  if (!email || !password) {
+    showToast('Please enter email and password', 'error');
+    return;
+  }
+  
+  if (password.length < 6) {
+    showToast('Password must be at least 6 characters', 'error');
+    return;
+  }
+  
+  try {
+    const response = await authFetch(`${API_BASE}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, name })
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      authToken = data.token;
+      currentUser = data.user;
+      localStorage.setItem('authToken', authToken);
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
+      showMainApp();
+      showToast('Account created!', 'success');
+    } else {
+      showToast(data.error || 'Registration failed', 'error');
+    }
+  } catch (err) {
+    showToast('Registration error', 'error');
+  }
+}
+
+function logout() {
+  authToken = null;
+  currentUser = null;
+  localStorage.removeItem('authToken');
+  localStorage.removeItem('currentUser');
+  document.getElementById('auth-modal').style.display = 'flex';
+  showLoginForm();
+}
+
+// Helper function for authenticated API calls
+async function authFetch(url, options = {}) {
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers
+  };
+  
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+  }
+  
+  return fetch(url, {
+    ...options,
+    headers
+  });
+}
+
+function showMainApp() {
+  document.getElementById('auth-modal').style.display = 'none';
   initializeNavigation();
   loadDashboard();
   loadSettings();
   initializeMobileNav();
-});
+  
+  // Show user info in sidebar
+  if (currentUser) {
+    const userInfo = document.createElement('div');
+    userInfo.className = 'user-info';
+    userInfo.innerHTML = `
+      <div style="padding: 16px; border-top: 1px solid var(--border); margin-top: auto;">
+        <div style="font-weight: 500;">${escapeHtml(currentUser.name || currentUser.email)}</div>
+        <a href="#" onclick="logout(); return false;" style="font-size: 12px; color: var(--danger);">Logout</a>
+      </div>
+    `;
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar && !sidebar.querySelector('.user-info')) {
+      sidebar.appendChild(userInfo);
+    }
+  }
+}
 
 // Navigation
 function initializeNavigation() {
@@ -105,7 +260,7 @@ function switchView(view) {
 // Dashboard
 async function loadDashboard() {
   try {
-    const response = await fetch(`${API_BASE}/api/stats`);
+    const response = await authFetch(`${API_BASE}/api/stats`);
     const stats = await response.json();
 
     document.getElementById('stat-contacts').textContent = stats.contacts || 0;
@@ -160,7 +315,8 @@ async function loadContacts() {
     if (search) url.searchParams.set('search', search);
     if (tag) url.searchParams.set('tag', tag);
 
-    const response = await fetch(url.toString());
+    const response = await authFetch(url.toString());
+    if (!response.ok) throw new Error('Failed to load contacts');
     const contacts = await response.json();
 
     const container = document.getElementById('contacts-list');
@@ -295,9 +451,8 @@ async function saveContact() {
       ? `${API_BASE}/api/contacts/${editingContactId}`
       : `${API_BASE}/api/contacts`;
 
-    const response = await fetch(url, {
+    const response = await authFetch(url, {
       method,
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, name, tags })
     });
 
@@ -316,7 +471,7 @@ async function saveContact() {
 
 async function editContact(id) {
   try {
-    const response = await fetch(`${API_BASE}/api/contacts/${id}`);
+    const response = await authFetch(`${API_BASE}/api/contacts/${id}`);
     const contact = await response.json();
     showContactModal(contact);
   } catch (err) {
@@ -328,7 +483,7 @@ async function deleteContact(id) {
   if (!confirm('Are you sure you want to delete this contact?')) return;
 
   try {
-    const response = await fetch(`${API_BASE}/api/contacts/${id}`, {
+    const response = await authFetch(`${API_BASE}/api/contacts/${id}`, {
       method: 'DELETE'
     });
 
@@ -352,7 +507,7 @@ window.bulkDeleteContacts = async function() {
   if (!confirm(`Delete ${contacts.length} selected contacts?`)) return;
 
   for (const id of contacts) {
-    await fetch(`${API_BASE}/api/contacts/${id}`, { method: 'DELETE' });
+    await authFetch(`${API_BASE}/api/contacts/${id}`, { method: 'DELETE' });
   }
 
   showToast(`Deleted ${contacts.length} contacts`, 'success');
@@ -388,7 +543,7 @@ window.exportContacts = async function() {
 // Export all contacts
 window.exportAllContacts = async function() {
   try {
-    const response = await fetch(`${API_BASE}/api/contacts`);
+    const response = await authFetch(`${API_BASE}/api/contacts`);
     const contacts = await response.json();
 
     downloadCSV(contacts, 'all-contacts.csv');
@@ -417,7 +572,7 @@ window.importContacts = async function(event) {
       const [email, name, tags] = line.split(',').map(s => s.trim().replace(/"/g, ''));
       if (email && isValidEmail(email)) {
         try {
-          await fetch(`${API_BASE}/api/contacts`, {
+          await authFetch(`${API_BASE}/api/contacts`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -479,7 +634,8 @@ function isValidEmail(email) {
 // Lists
 async function loadLists() {
   try {
-    const response = await fetch(`${API_BASE}/api/lists`);
+    const response = await authFetch(`${API_BASE}/api/lists`);
+    if (!response.ok) throw new Error('Failed to load lists');
     const lists = await response.json();
 
     const container = document.getElementById('lists-grid');
@@ -536,7 +692,7 @@ async function saveList() {
       ? `${API_BASE}/api/lists/${editingListId}`
       : `${API_BASE}/api/lists`;
 
-    const response = await fetch(url, {
+    const response = await authFetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, description })
@@ -556,7 +712,8 @@ async function saveList() {
 
 async function viewList(id) {
   try {
-    const response = await fetch(`${API_BASE}/api/lists/${id}`);
+    const response = await authFetch(`${API_BASE}/api/lists/${id}`);
+    if (!response.ok) throw new Error('Failed to load list');
     const list = await response.json();
 
     document.getElementById('list-detail-title').textContent = list.name;
@@ -565,7 +722,8 @@ async function viewList(id) {
     document.getElementById('list-detail-id').value = list.id;
 
     // Load available contacts for dropdown
-    const contactsResponse = await fetch(`${API_BASE}/api/contacts`);
+    const contactsResponse = await authFetch(`${API_BASE}/api/contacts`);
+    if (!contactsResponse.ok) throw new Error('Failed to load contacts');
     const allContacts = await contactsResponse.json();
     const listContactIds = list.contacts?.map(c => c.id) || [];
     const availableContacts = allContacts.filter(c => !listContactIds.includes(c.id));
@@ -620,7 +778,7 @@ async function addSelectedContactToList() {
   }
 
   try {
-    const response = await fetch(`${API_BASE}/api/lists/${listId}/contacts`, {
+    const response = await authFetch(`${API_BASE}/api/lists/${listId}/contacts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contactId: parseInt(contactId) })
@@ -644,7 +802,7 @@ function hideListDetailModal() {
 
 async function removeContactFromList(listId, contactId) {
   try {
-    await fetch(`${API_BASE}/api/lists/${listId}/contacts/${contactId}`, {
+    await authFetch(`${API_BASE}/api/lists/${listId}/contacts/${contactId}`, {
       method: 'DELETE'
     });
     showToast('Contact removed from list', 'success');
@@ -657,7 +815,7 @@ async function removeContactFromList(listId, contactId) {
 
 async function editList(id) {
   try {
-    const response = await fetch(`${API_BASE}/api/lists/${id}`);
+    const response = await authFetch(`${API_BASE}/api/lists/${id}`);
     const list = await response.json();
     showListModal(list);
   } catch (err) {
@@ -669,7 +827,7 @@ async function deleteList(id) {
   if (!confirm('Are you sure you want to delete this list?')) return;
 
   try {
-    const response = await fetch(`${API_BASE}/api/lists/${id}`, {
+    const response = await authFetch(`${API_BASE}/api/lists/${id}`, {
       method: 'DELETE'
     });
 
@@ -685,7 +843,7 @@ async function deleteList(id) {
 // Templates
 async function loadTemplates() {
   try {
-    const response = await fetch(`${API_BASE}/api/templates`);
+    const response = await authFetch(`${API_BASE}/api/templates`);
     const templates = await response.json();
 
     const container = document.getElementById('templates-grid');
@@ -750,7 +908,7 @@ async function saveTemplate() {
       ? `${API_BASE}/api/templates/${editingTemplateId}`
       : `${API_BASE}/api/templates`;
 
-    const response = await fetch(url, {
+    const response = await authFetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -776,7 +934,7 @@ async function saveTemplate() {
 
 async function editTemplate(id) {
   try {
-    const response = await fetch(`${API_BASE}/api/templates/${id}`);
+    const response = await authFetch(`${API_BASE}/api/templates/${id}`);
     const template = await response.json();
     showTemplateModal(template);
   } catch (err) {
@@ -788,7 +946,7 @@ async function deleteTemplate(id) {
   if (!confirm('Are you sure you want to delete this template?')) return;
 
   try {
-    const response = await fetch(`${API_BASE}/api/templates/${id}`, {
+    const response = await authFetch(`${API_BASE}/api/templates/${id}`, {
       method: 'DELETE'
     });
 
@@ -804,7 +962,7 @@ async function deleteTemplate(id) {
 // Campaigns
 async function loadCampaigns() {
   try {
-    const response = await fetch(`${API_BASE}/api/campaigns`);
+    const response = await authFetch(`${API_BASE}/api/campaigns`);
     const campaigns = await response.json();
 
     const container = document.getElementById('campaigns-list');
@@ -872,7 +1030,7 @@ async function showCampaignModal(campaign = null) {
   await initCampaignEditor(blocks);
 
   // Load lists
-  const listsPromise = fetch(`${API_BASE}/api/lists`)
+  const listsPromise = authFetch(`${API_BASE}/api/lists`)
     .then(r => r.json())
     .then(lists => {
       const select = document.getElementById('campaign-list');
@@ -881,7 +1039,7 @@ async function showCampaignModal(campaign = null) {
     });
 
   // Load templates
-  const templatesPromise = fetch(`${API_BASE}/api/templates`)
+  const templatesPromise = authFetch(`${API_BASE}/api/templates`)
     .then(r => r.json())
     .then(templates => {
       const select = document.getElementById('campaign-template');
@@ -917,7 +1075,7 @@ async function loadTemplateIntoCampaign(templateId = null) {
   selectedTemplateId = parseInt(id);
   
   try {
-    const response = await fetch(`${API_BASE}/api/templates/${id}`);
+    const response = await authFetch(`${API_BASE}/api/templates/${id}`);
     const template = await response.json();
     
     // Load template content into editor
@@ -983,7 +1141,7 @@ async function saveCampaignAsDraft() {
       ? `${API_BASE}/api/campaigns/${editingCampaignId}`
       : `${API_BASE}/api/campaigns`;
 
-    const response = await fetch(url, {
+    const response = await authFetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1027,7 +1185,7 @@ async function confirmSendCampaign() {
   btn.textContent = 'Sending...';
 
   try {
-    const response = await fetch(`${API_BASE}/api/campaigns/${editingCampaignId}/send`, {
+    const response = await authFetch(`${API_BASE}/api/campaigns/${editingCampaignId}/send`, {
       method: 'POST'
     });
 
@@ -1050,7 +1208,7 @@ async function confirmSendCampaign() {
 
 async function editCampaign(id) {
   try {
-    const response = await fetch(`${API_BASE}/api/campaigns/${id}`);
+    const response = await authFetch(`${API_BASE}/api/campaigns/${id}`);
     const campaign = await response.json();
     showCampaignModal(campaign);
   } catch (err) {
@@ -1062,7 +1220,7 @@ async function deleteCampaign(id) {
   if (!confirm('Are you sure you want to delete this campaign?')) return;
 
   try {
-    const response = await fetch(`${API_BASE}/api/campaigns/${id}`, {
+    const response = await authFetch(`${API_BASE}/api/campaigns/${id}`, {
       method: 'DELETE'
     });
 
@@ -1083,7 +1241,7 @@ async function viewCampaignStats(id) {
 // Settings
 async function loadSettings() {
   try {
-    const response = await fetch(`${API_BASE}/api/settings`);
+    const response = await authFetch(`${API_BASE}/api/settings`);
     const settings = await response.json();
 
     document.getElementById('mailgun-api-key').value = '';
@@ -1103,7 +1261,7 @@ async function saveSettings() {
   }
 
   try {
-    const response = await fetch(`${API_BASE}/api/settings`, {
+    const response = await authFetch(`${API_BASE}/api/settings`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
