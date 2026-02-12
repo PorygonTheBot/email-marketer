@@ -269,6 +269,29 @@ server {
 }
 ```
 
+## Developer Notes
+
+### Common Issues & Solutions
+
+#### Authentication Not Working in UI
+**Symptom:** API works with curl but UI shows empty data or features don't work.
+**Cause:** Frontend fetch calls not sending auth token.
+**Fix:** Ensure all API calls use `authFetch()` instead of `fetch()`:
+```javascript
+// ❌ Wrong
+const response = await fetch(`${API_BASE}/api/lists`);
+
+// ✅ Correct
+const response = await authFetch(`${API_BASE}/api/lists`);
+```
+
+#### Testing Checklist
+Before declaring a feature complete:
+- [ ] Test through the actual UI (not just API)
+- [ ] Test with a fresh user account
+- [ ] Test after page refresh
+- [ ] Run the full test suite: `npm run test:api`
+
 ## License
 
 MIT
